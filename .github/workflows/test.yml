@@ -1,0 +1,40 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.11.28"
+
+      - name: Install dependencies
+        run: uv sync --all-packages
+
+      - name: Ruff lint
+        run: uv run ruff check services libs
+
+      - name: Ruff format check
+        run: uv run ruff format --check services libs
+
+      - name: Mypy
+        run: uv run mypy libs/common services
+
+      # 测试使用 SQLite 内存，无需启动服务容器
+      - name: Pytest
+        run: uv run pytest services -q
+
+      # 验证 Helm chart 模板可渲染
+      - name: Helm lint
+        run: |
+          curl -fsSL https://get.helm.sh/helm-v3.16.4-linux-amd64.tar.gz | tar xz
+          sudo mv linux-amd64/helm /usr/local/bin/helm
+          helm lint deploy/helm/codeflow

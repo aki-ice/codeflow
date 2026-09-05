@@ -1,0 +1,17 @@
+CodeFlow 已部署到 namespace: {{ .Release.Namespace }}
+
+{{- range $name, $svc := .Values.services }}
+{{- if $svc.enabled }}
+  {{ $name }}: http://{{ $.Release.Name }}-{{ $name }}.{{ $.Release.Namespace }}.svc:8000 ({{ $svc.replicas }} replicas)
+{{- end }}
+{{- end }}
+
+本地访问 gateway:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }}-gateway 8000:8000
+  curl http://localhost:8000/health
+
+Ingress(如启用):
+  http://{{ .Values.ingress.host }} (需配置 DNS/hosts 指向集群 ingress IP)
+
+查看迁移 Job:
+  kubectl -n {{ .Release.Namespace }} get jobs

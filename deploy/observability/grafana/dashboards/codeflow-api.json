@@ -1,0 +1,84 @@
+{
+  "title": "CodeFlow API Overview",
+  "uid": "codeflow-api",
+  "tags": ["codeflow"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "QPS (by service)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(codeflow_http_requests_total[5m])) by (service)",
+          "legendFormat": "{{service}}"
+        }
+      ],
+      "datasource": "Prometheus"
+    },
+    {
+      "id": 2,
+      "title": "Latency P50 / P95 / P99",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(codeflow_http_request_duration_seconds_bucket[5m])) by (le, service))",
+          "legendFormat": "P50 {{service}}"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(codeflow_http_request_duration_seconds_bucket[5m])) by (le, service))",
+          "legendFormat": "P95 {{service}}"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(codeflow_http_request_duration_seconds_bucket[5m])) by (le, service))",
+          "legendFormat": "P99 {{service}}"
+        }
+      ],
+      "datasource": "Prometheus"
+    },
+    {
+      "id": 3,
+      "title": "Error Rate (5xx)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(codeflow_http_requests_total{status=~\"5..\"}[5m])) by (service) / sum(rate(codeflow_http_requests_total[5m])) by (service)",
+          "legendFormat": "{{service}}"
+        }
+      ],
+      "datasource": "Prometheus"
+    },
+    {
+      "id": 4,
+      "title": "Request Count",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(increase(codeflow_http_requests_total[1h]))",
+          "legendFormat": "1h total"
+        }
+      ],
+      "datasource": "Prometheus"
+    },
+    {
+      "id": 5,
+      "title": "Service Logs (Loki)",
+      "type": "logs",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "{container=~\"codeflow-.*\"}",
+          "queryType": "range"
+        }
+      ],
+      "datasource": "Loki"
+    }
+  ]
+}

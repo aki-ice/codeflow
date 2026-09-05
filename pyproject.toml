@@ -1,0 +1,46 @@
+[project]
+name = "codeflow"
+version = "0.2.0"
+description = "CodeFlow - AI-driven cloud-native dev collaboration platform (microservices monorepo)"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "aiosqlite>=0.20",
+    "httpx>=0.28",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "locust>=2.46.4",
+]
+
+[tool.uv.workspace]
+members = ["libs/*", "services/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "SIM"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"alembic/env.py" = ["E402"]
+"services/*/alembic/env.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+check_untyped_defs = true
+explicit_package_bases = true
+mypy_path = "libs/common"
+exclude = ["services/.*/alembic", "services/.*/tests"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["services"]
+addopts = "--import-mode=importlib -p no:cacheprovider"

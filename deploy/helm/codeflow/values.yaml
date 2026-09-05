@@ -1,0 +1,119 @@
+# ============ 全局 ============
+global:
+  # 镜像仓库前缀，如 ghcr.io/yourname（留空用本地镜像）
+  imageRegistry: ""
+  imageTag: "dev"
+  imagePullPolicy: IfNotPresent
+  secretKey: "change-me-to-a-random-secret-at-least-32-bytes-long"
+  internalToken: "dev-internal-token"
+
+# ============ 微服务 ============
+# module: uvicorn 启动的 Python 包名
+# databaseUrl: 该服务连接的数据库（postgres 服务内主机名）
+services:
+  user:
+    enabled: true
+    image: codeflow/user-service
+    module: user_service
+    replicas: 2
+    databaseUrl: postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_users
+  project:
+    enabled: true
+    image: codeflow/project-service
+    module: project_service
+    replicas: 2
+    databaseUrl: postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_projects
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+      cpuUtilization: 70
+  notification:
+    enabled: true
+    image: codeflow/notification-service
+    module: notification_service
+    replicas: 2
+    databaseUrl: postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_notifications
+  ci:
+    enabled: true
+    image: codeflow/ci-service
+    module: ci_service
+    replicas: 2
+    databaseUrl: postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_ci
+    env:
+      CI_SIMULATE: "true"
+  ai:
+    enabled: true
+    image: codeflow/ai-service
+    module: ai_service
+    replicas: 2
+    databaseUrl: postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_ai
+    env:
+      LLM_API_KEY: ""
+      LLM_BASE_URL: "https://api.openai.com/v1"
+      LLM_MODEL: "gpt-4o-mini"
+  gateway:
+    enabled: true
+    image: codeflow/gateway-service
+    module: gateway_service
+    replicas: 2
+
+# 迁移 Job：对这些服务执行 alembic upgrade head
+migrations:
+  enabled: true
+  items:
+    - name: user
+      module: user_service
+      image: codeflow/user-service
+      databaseUrl: postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_users
+    - name: project
+      module: project_service
+      image: codeflow/project-service
+      databaseUrl: postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_projects
+    - name: notification
+      module: notification_service
+      image: codeflow/notification-service
+      databaseUrl: postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_notifications
+    - name: ci
+      module: ci_service
+      image: codeflow/ci-service
+      databaseUrl: postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_ci
+    - name: ai
+      module: ai_service
+      image: codeflow/ai-service
+      databaseUrl: postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_ai
+
+# ============ 资源 ============
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# ============ Ingress ============
+ingress:
+  enabled: true
+  className: nginx
+  host: codeflow.local
+
+# ============ 基础设施 ============
+postgres:
+  enabled: true
+  image: pgvector/pgvector:pg16
+  storage: 5Gi
+  databases:
+    - codeflow_users
+    - codeflow_projects
+    - codeflow_notifications
+    - codeflow_ci
+    - codeflow_ai
+
+redis:
+  enabled: true
+  image: redis:7-alpine
+
+kafka:
+  enabled: true
+  image: apache/kafka:3.9.0

@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "codeflow.name" . }}-secrets
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "codeflow.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  SECRET_KEY: {{ .Values.global.secretKey | quote }}
+  INTERNAL_TOKEN: {{ .Values.global.internalToken | quote }}
+  POSTGRES_USER: "codeflow"
+  POSTGRES_PASSWORD: "codeflow"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "codeflow.name" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "codeflow.labels" . | nindent 4 }}
+data:
+  KAFKA_ENABLED: {{ .Values.kafka.enabled | quote }}
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
+  REDIS_URL: "redis://redis:6379/0"
+  USER_SERVICE_URL: "http://{{ .Release.Name }}-user:8000"
+  PROJECT_SERVICE_URL: "http://{{ .Release.Name }}-project:8000"
+  NOTIFICATION_SERVICE_URL: "http://{{ .Release.Name }}-notification:8000"
+  CI_SERVICE_URL: "http://{{ .Release.Name }}-ci:8000"
+  GITHUB_WEBHOOK_SECRET: ""
+  GITHUB_TOKEN: ""
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "codeflow.name" . }}-postgres-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "codeflow.labels" . | nindent 4 }}
+data:
+  init.sql: |
+{{- range .Values.postgres.databases }}
+    CREATE DATABASE {{ . }};
+{{- end }}

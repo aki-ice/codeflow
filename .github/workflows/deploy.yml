@@ -1,0 +1,61 @@
+name: Deploy
+
+# 推 tag（v*）或手动触发时，用 Helm 部署到 Kubernetes
+on:
+  workflow_dispatch:
+    inputs:
+      namespace:
+        description: "K8s namespace"
+        default: codeflow
+      image_tag:
+        description: "Image tag to deploy (default: latest)"
+        default: "latest"
+  push:
+    tags: ["v*"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Helm
+        run: |
+          curl -fsSL https://get.helm.sh/helm-v3.16.4-linux-amd64.tar.gz | tar xz
+          sudo mv linux-amd64/helm /usr/local/bin/helm
+
+      - name: Setup kubeconfig
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Compute image tag
+        id: tag
+        run: |
+          if [[ -n "${{ inputs.image_tag }}" ]]; then
+            echo "value=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "value=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Helm upgrade
+        run: |
+          REGISTRY=ghcr.io/${{ github.repository_owner }}/codeflow
+          helm upgrade --install codeflow deploy/helm/codeflow \
+            --namespace ${{ inputs.namespace || 'codeflow' }} --create-namespace \
+            --set global.imageRegistry=$REGISTRY \
+            --set global.imageTag=${{ steps.tag.outputs.value }} \
+            --set global.secretKey=${{ secrets.SECRET_KEY }} \
+            --set global.internalToken=${{ secrets.INTERNAL_TOKEN }} \
+            --wait --timeout 5m
+
+      - name: Verify rollout
+        run: |
+          kubectl -n ${{ inputs.namespace || 'codeflow' }} get pods,svc,jobs
+          kubectl -n ${{ inputs.namespace || 'codeflow' }} rollout status deploy/gateway --timeout=120s

@@ -1,0 +1,63 @@
+# 服务 Deployment 模板说明：每个服务 = Deployment(2副本+探针) + Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: codeflow
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+        - name: user-service
+          image: codeflow/user-service:dev
+          imagePullPolicy: IfNotPresent
+          # K8s 中由独立的 migrate Job 负责建表，这里只启动应用
+          command: ["uvicorn", "user_service.main:app", "--host", "0.0.0.0", "--port", "8000"]
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: codeflow-config
+            - secretRef:
+                name: codeflow-secrets
+          env:
+            - name: DATABASE_URL
+              value: "postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_users"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: codeflow
+spec:
+  selector:
+    app: user-service
+  ports:
+    - port: 8000
+      targetPort: 8000

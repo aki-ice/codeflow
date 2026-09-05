@@ -1,0 +1,29 @@
+[project]
+name = "ci-service"
+version = "0.1.0"
+description = "CodeFlow CI 服务：Pipeline 编排/执行器/构建日志"
+requires-python = ">=3.12"
+dependencies = [
+    "codeflow-common",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "aiokafka>=0.12",
+]
+
+[dependency-groups]
+dev = ["aiosqlite>=0.20"]
+
+[tool.uv.sources]
+codeflow-common = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["ci_service"]

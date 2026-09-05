@@ -1,0 +1,101 @@
+# 数据库迁移 Job：在服务启动前执行 alembic upgrade head
+# 使用: kubectl apply -f 10-migrate-jobs.yaml 后等待 Job Complete 再启动服务
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-user-service
+  namespace: codeflow
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: codeflow/user-service:dev
+          imagePullPolicy: IfNotPresent
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: codeflow-config
+            - secretRef:
+                name: codeflow-secrets
+          env:
+            - name: DATABASE_URL
+              value: "postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_users"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-project-service
+  namespace: codeflow
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: codeflow/project-service:dev
+          imagePullPolicy: IfNotPresent
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: codeflow-config
+            - secretRef:
+                name: codeflow-secrets
+          env:
+            - name: DATABASE_URL
+              value: "postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_projects"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-notification-service
+  namespace: codeflow
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: codeflow/notification-service:dev
+          imagePullPolicy: IfNotPresent
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: codeflow-config
+            - secretRef:
+                name: codeflow-secrets
+          env:
+            - name: DATABASE_URL
+              value: "postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_notifications"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-ci-service
+  namespace: codeflow
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: codeflow/ci-service:dev
+          imagePullPolicy: IfNotPresent
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: codeflow-config
+            - secretRef:
+                name: codeflow-secrets
+          env:
+            - name: DATABASE_URL
+              value: "postgresql+asyncpg://codeflow:codeflow@postgres:5432/codeflow_ci"

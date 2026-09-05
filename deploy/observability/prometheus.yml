@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # ===== 本地开发：服务跑在宿主机（uvicorn 直接启动）=====
+  # 容器内通过 host.docker.internal 访问宿主机端口
+  - job_name: codeflow-local
+    static_configs:
+      - targets:
+          - host.docker.internal:8000 # gateway
+          - host.docker.internal:8001 # user-service
+          - host.docker.internal:8002 # project-service
+          - host.docker.internal:8003 # notification-service
+          - host.docker.internal:8004 # ci-service
+          - host.docker.internal:8005 # ai-service
+
+  # ===== 全容器化部署（docker compose up 全套）时改用服务名 =====
+  # - job_name: codeflow-gateway
+  #   static_configs:
+  #     - targets: ["gateway:8000"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
